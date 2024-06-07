@@ -16,7 +16,7 @@ use crate::app::{Action, App};
 use crate::tui::Tui;
 
 fn main() -> Result<()> {
-    let app = App { should_quit: false };
+    let app = App::new();
     let tick_rate = Duration::from_millis(250);
     let mut tui = Tui::new();
     tui.enter();

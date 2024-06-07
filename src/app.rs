@@ -14,6 +14,10 @@ pub struct App {
 }
 
 impl App {
+    pub fn new() -> Self {
+        App { should_quit: false }
+    }
+
     pub fn update(&mut self, action: Action) -> () {
         match action {
             Action::Quit => self.should_quit = true,

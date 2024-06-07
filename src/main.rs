@@ -1,40 +1,66 @@
-use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
+//#![allow(dead_code)]
+//#![allow(unused_imports)]
+//#![allow(unused_variables)]
+
+mod app;
+mod tui;
+mod ui;
+
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use std::{
+    io::Result,
+    time::{Duration, Instant},
 };
-use ratatui::{
-    prelude::{CrosstermBackend, Stylize, Terminal},
-    widgets::Paragraph,
-};
-use std::io::{stdout, Result};
+
+use crate::app::{Action, App};
+use crate::tui::Tui;
 
 fn main() -> Result<()> {
-    stdout().execute(EnterAlternateScreen)?;
-    enable_raw_mode()?;
-    let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-    terminal.clear()?;
+    let app = App { should_quit: false };
+    let tick_rate = Duration::from_millis(250);
+    let mut tui = Tui::new();
+    tui.enter();
 
+    run_app(&mut tui, app, tick_rate)?;
+
+    tui.exit();
+    Ok(())
+}
+
+fn run_app(tui: &mut Tui, mut app: App, tick_rate: Duration) -> Result<()> {
+    let mut last_tick = Instant::now();
     loop {
-        terminal.draw(|frame| {
-            let area = frame.size();
-            frame.render_widget(
-                Paragraph::new("Hello Ratatui! (press 'q' to quit)").white(),
-                //.on_blue(),
-                area,
-            );
-        })?;
+        tui.terminal.draw(|f| ui::draw(f, &mut app))?;
 
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                    break;
+        let timeout = tick_rate.saturating_sub(last_tick.elapsed());
+        if crossterm::event::poll(timeout)? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    let action = handle_keys(key);
+                    app.update(action);
                 }
             }
         }
-    }
 
-    stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
-    Ok(())
+        if last_tick.elapsed() >= tick_rate {
+            app.update(Action::Tick);
+            last_tick = Instant::now();
+        }
+        if app.should_quit {
+            return Ok(());
+        }
+    }
+}
+
+fn handle_keys(key: KeyEvent) -> Action {
+    match key.code {
+        //KeyCode::Left | KeyCode::Char('h') => app.on_left(),
+        //KeyCode::Right | KeyCode::Char('l') => app.on_right(),
+        KeyCode::Up | KeyCode::Char('k') => Action::Up,
+        KeyCode::Down | KeyCode::Char('j') => Action::Down,
+        KeyCode::Char('q') => Action::Quit,
+        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::Quit,
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::Quit,
+        _ => Action::Tick,
+    }
 }

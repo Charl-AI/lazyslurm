@@ -214,10 +214,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         inner_layout[0],
         &mut app.state,
     );
-    let idx = app.state.selected().unwrap();
+
     if app.show_help == false {
         if app.jobs.len() > 0 {
-            let job = &app.jobs[idx];
+            if app.state.selected().unwrap() > app.jobs.len() - 1 {
+                app.end()
+            }
+            let job = &app.jobs[app.state.selected().unwrap()];
             f.render_widget(
                 get_job_details(&job)
                     .block(Block::new().borders(Borders::ALL).title_top("Details")),

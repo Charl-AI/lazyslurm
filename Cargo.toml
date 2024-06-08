@@ -1,6 +1,8 @@
 [package]
-name = "lazyslurm"
+name = "LazySLURM"
 version = "0.1.0"
+authors = ["C Jones"]
+repository = "github.com/Charl-AI/lazyslurm"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

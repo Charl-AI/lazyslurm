@@ -174,8 +174,15 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(outer_layout[1]);
 
+    let pkg_name = env!("CARGO_PKG_NAME");
+    let pkg_version = env!("CARGO_PKG_VERSION");
+    let pkg_authors = env!("CARGO_PKG_AUTHORS");
+    let pkg_repo = env!("CARGO_PKG_REPOSITORY");
     f.render_widget(
-        Paragraph::new("LazySLURM v0.0 | C Jones | github.com/Charl-AI/lazyslurm"),
+        Paragraph::new(format!(
+            "{} v{} | {} | {}",
+            pkg_name, pkg_version, pkg_authors, pkg_repo
+        )),
         outer_layout[0],
     );
     f.render_stateful_widget(

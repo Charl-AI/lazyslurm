@@ -35,7 +35,7 @@ pub struct Job {
     pub nodelist: String,
 }
 
-fn get_jobs(my_jobs_only: bool) -> Vec<Job> {
+fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
     let output_separator = "###";
     let fields = [
         "jobid",
@@ -71,15 +71,7 @@ fn get_jobs(my_jobs_only: bool) -> Vec<Job> {
             let parts: Vec<_> = l.split(output_separator).collect();
 
             if my_jobs_only {
-                //let myself = "mb121";
-                let myself = String::from_utf8(
-                    Command::new("whoami")
-                        .output()
-                        .expect("failed to execute whoami")
-                        .stdout,
-                )
-                .unwrap();
-                if parts[3] != myself {
+                if parts[3].to_owned() != my_user.to_owned() {
                     return None;
                 }
             }
@@ -128,11 +120,13 @@ impl App {
                 .expect("failed to execute whoami")
                 .stdout,
         )
-        .unwrap();
+        .unwrap()
+        .trim()
+        .to_string();
 
         App {
             should_quit: false,
-            jobs: get_jobs(false),
+            jobs: get_jobs(false, &my_user),
             state,
             show_help: false,
             my_jobs_only: false,
@@ -143,7 +137,7 @@ impl App {
     pub fn update(&mut self, action: Action) -> () {
         match action {
             Action::Quit => self.should_quit = true,
-            Action::Tick => self.jobs = get_jobs(self.my_jobs_only),
+            Action::Tick => self.jobs = get_jobs(self.my_jobs_only, &self.my_user),
             Action::Up => self.previous(),
             Action::Down => self.next(),
             Action::Home => self.home(),

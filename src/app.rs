@@ -34,6 +34,7 @@ pub struct Job {
     pub tres: String,
     pub partition: String,
     pub nodelist: String,
+    pub priority: String,
 }
 
 fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
@@ -54,6 +55,7 @@ fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
         "reason",
         "ArrayJobID",
         "ArrayTaskID",
+        "priority",
     ];
     let output_format = fields
         .map(|s| s.to_owned() + ":" + output_separator)
@@ -98,6 +100,7 @@ fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
                 reason: parts[12].to_owned(),
                 array_id: parts[13].to_owned(),
                 array_step: parts[14].to_owned(),
+                priority: parts[15].to_owned(),
             })
         })
         .collect();

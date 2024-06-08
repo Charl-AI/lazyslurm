@@ -179,10 +179,18 @@ fn get_job_details(job: &Job) -> Paragraph {
         Span::raw(" "),
         Span::styled(&job.name, Style::default()),
     ]);
+    let priority = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "Priority", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.priority, Style::default()),
+    ]);
 
     let text = Text::from(vec![
         status, reason, user, jobid, arrayid, array_step, partition, nodelist, submittime,
-        starttime, timelimit, timeused, tres, command,
+        starttime, timelimit, timeused, tres, command, priority,
     ]);
 
     Paragraph::new(text)

@@ -10,7 +10,7 @@ pub enum Action {
     End,
     PageDown,
     PageUp,
-    //ToggleFocus,
+    ToggleView,
     //ConfirmAction
     //CancelAction
     //Attach,
@@ -34,7 +34,7 @@ pub struct Job {
     pub nodelist: String,
 }
 
-fn get_jobs() -> Vec<Job> {
+fn get_jobs(my_jobs_only: bool) -> Vec<Job> {
     let output_separator = "###";
     let fields = [
         "jobid",
@@ -69,6 +69,20 @@ fn get_jobs() -> Vec<Job> {
         .filter_map(|l| {
             let parts: Vec<_> = l.split(output_separator).collect();
 
+            if my_jobs_only {
+                //let myself = "mb121";
+                let myself = String::from_utf8(
+                    Command::new("whoami")
+                        .output()
+                        .expect("failed to execute whoami")
+                        .stdout,
+                )
+                .unwrap();
+                if parts[3] != myself {
+                    return None;
+                }
+            }
+
             if parts.len() != fields.len() + 1 {
                 return None;
             }
@@ -98,30 +112,42 @@ pub struct App {
     pub should_quit: bool,
     pub jobs: Vec<Job>,
     pub state: ListState,
+    pub my_jobs_only: bool,
+    pub my_user: String,
 }
 
 impl App {
     pub fn new() -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
+        let my_user = String::from_utf8(
+            Command::new("whoami")
+                .output()
+                .expect("failed to execute whoami")
+                .stdout,
+        )
+        .unwrap();
+
         App {
             should_quit: false,
-            jobs: get_jobs(),
+            jobs: get_jobs(false),
             state,
+            my_jobs_only: false,
+            my_user,
         }
     }
 
     pub fn update(&mut self, action: Action) -> () {
         match action {
             Action::Quit => self.should_quit = true,
-            Action::Tick => self.jobs = get_jobs(),
+            Action::Tick => self.jobs = get_jobs(self.my_jobs_only),
             Action::Up => self.previous(),
             Action::Down => self.next(),
             Action::Home => self.home(),
             Action::End => self.end(),
             Action::PageDown => self.down_5(),
             Action::PageUp => self.up_5(),
-            _ => (),
+            Action::ToggleView => self.toggle_job_view(),
         }
     }
 
@@ -184,5 +210,15 @@ impl App {
     }
     pub fn end(&mut self) -> () {
         self.state.select(Some(self.jobs.len() - 1))
+    }
+
+    pub fn toggle_job_view(&mut self) -> () {
+        if self.my_jobs_only == false {
+            self.my_jobs_only = true;
+            self.state.select(Some(0));
+        } else {
+            self.my_jobs_only = false;
+            self.state.select(Some(0));
+        }
     }
 }

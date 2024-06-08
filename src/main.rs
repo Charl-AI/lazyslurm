@@ -67,6 +67,7 @@ fn handle_keys(key: KeyEvent) -> Action {
         KeyCode::Char('q') => Action::Quit,
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::Quit,
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::Quit,
+        KeyCode::Tab => Action::ToggleView,
         _ => Action::Tick,
     }
 }

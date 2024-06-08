@@ -187,11 +187,19 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         &mut app.state,
     );
     let idx = app.state.selected().unwrap();
-    let job = &app.jobs[idx];
-    f.render_widget(
-        get_job_details(&job).block(Block::new().borders(Borders::ALL).title_top("Details")),
-        inner_layout[1],
-    );
+    if app.jobs.len() > 0 {
+        let job = &app.jobs[idx];
+        f.render_widget(
+            get_job_details(&job).block(Block::new().borders(Borders::ALL).title_top("Details")),
+            inner_layout[1],
+        );
+    } else {
+        f.render_widget(
+            Paragraph::new(format!("No Jobs in queue for user: {}", app.my_user))
+                .block(Block::new().borders(Borders::ALL).title_top("Details")),
+            inner_layout[1],
+        );
+    }
     f.render_widget(
         Paragraph::new(
             "q: quit | k: up | j: down | a: attach to job | x: cancel job | <tab>: show only my jobs (toggle)",

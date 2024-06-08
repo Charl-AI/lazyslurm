@@ -152,6 +152,10 @@ impl App {
     }
 
     pub fn next(&mut self) -> () {
+        if self.jobs.len() == 0 {
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.jobs.len() - 1 {
@@ -165,6 +169,10 @@ impl App {
         self.state.select(Some(i));
     }
     pub fn previous(&mut self) {
+        if self.jobs.len() == 0 {
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -179,6 +187,10 @@ impl App {
     }
 
     pub fn down_5(&mut self) -> () {
+        if self.jobs.len() == 0 {
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.jobs.len() - 5 {
@@ -192,6 +204,10 @@ impl App {
         self.state.select(Some(i));
     }
     pub fn up_5(&mut self) -> () {
+        if self.jobs.len() == 0 {
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i <= 5 {
@@ -206,9 +222,15 @@ impl App {
     }
 
     pub fn home(&mut self) -> () {
+        if self.jobs.len() == 0 {
+            return;
+        }
         self.state.select(Some(0))
     }
     pub fn end(&mut self) -> () {
+        if self.jobs.len() == 0 {
+            return;
+        }
         self.state.select(Some(self.jobs.len() - 1))
     }
 

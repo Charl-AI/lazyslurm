@@ -147,6 +147,14 @@ fn get_job_details(job: &Job) -> Paragraph {
         Span::raw(" "),
         Span::styled(&job.starttime, Style::default()),
     ]);
+    let timelimit = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "TimeLimit", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.timelimit, Style::default()),
+    ]);
     let timeused = Line::from(vec![
         Span::styled(
             format!("{:<max$.max$}", "RunningTime", max = max_width),
@@ -174,7 +182,7 @@ fn get_job_details(job: &Job) -> Paragraph {
 
     let text = Text::from(vec![
         status, user, reason, jobid, arrayid, array_step, partition, nodelist, submittime,
-        starttime, timeused, tres, command,
+        starttime, timelimit, timeused, tres, command,
     ]);
 
     Paragraph::new(text)

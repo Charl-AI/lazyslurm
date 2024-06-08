@@ -73,37 +73,21 @@ fn get_jobs() -> Vec<Job> {
                 return None;
             }
 
-            let id = parts[0];
-            let name = parts[1];
-            let state = parts[2];
-            let user = parts[3];
-            let timeused = parts[4];
-            let submittime = parts[5];
-            let starttime = parts[6];
-            let tres = parts[7];
-            let partition = parts[8];
-            let nodelist = parts[9];
-            let state_compact = parts[10];
-            let reason = parts[11];
-
-            let array_job_id = parts[12];
-            let array_task_id = parts[13];
-
             Some(Job {
-                job_id: id.to_owned(),
-                name: name.to_owned(),
-                state: state.to_owned(),
-                state_compact: state_compact.to_owned(),
-                user: user.to_owned(),
-                timeused: timeused.to_owned(),
-                starttime: starttime.to_owned(),
-                submittime: submittime.to_owned(),
-                tres: tres.to_owned(),
-                partition: partition.to_owned(),
-                nodelist: nodelist.to_owned(),
-                array_id: array_job_id.to_owned(),
-                reason: reason.to_owned(),
-                array_step: array_task_id.to_owned(),
+                job_id: parts[0].to_owned(),
+                name: parts[1].to_owned(),
+                state: parts[2].to_owned(),
+                user: parts[3].to_owned(),
+                timeused: parts[4].to_owned(),
+                starttime: parts[5].to_owned(),
+                submittime: parts[6].to_owned(),
+                tres: parts[7].to_owned(),
+                partition: parts[8].to_owned(),
+                nodelist: parts[9].to_owned(),
+                state_compact: parts[10].to_owned(),
+                reason: parts[11].to_owned(),
+                array_id: parts[12].to_owned(),
+                array_step: parts[13].to_owned(),
             })
         })
         .collect();

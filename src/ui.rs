@@ -181,7 +181,7 @@ fn get_job_details(job: &Job) -> Paragraph {
     ]);
 
     let text = Text::from(vec![
-        status, user, reason, jobid, arrayid, array_step, partition, nodelist, submittime,
+        status, reason, user, jobid, arrayid, array_step, partition, nodelist, submittime,
         starttime, timelimit, timeused, tres, command,
     ]);
 

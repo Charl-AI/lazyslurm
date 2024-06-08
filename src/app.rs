@@ -11,6 +11,7 @@ pub enum Action {
     PageDown,
     PageUp,
     ToggleView,
+    ToggleHelp,
     //ConfirmAction
     //CancelAction
     //Attach,
@@ -112,6 +113,7 @@ pub struct App {
     pub should_quit: bool,
     pub jobs: Vec<Job>,
     pub state: ListState,
+    pub show_help: bool,
     pub my_jobs_only: bool,
     pub my_user: String,
 }
@@ -132,6 +134,7 @@ impl App {
             should_quit: false,
             jobs: get_jobs(false),
             state,
+            show_help: false,
             my_jobs_only: false,
             my_user,
         }
@@ -148,6 +151,7 @@ impl App {
             Action::PageDown => self.down_5(),
             Action::PageUp => self.up_5(),
             Action::ToggleView => self.toggle_job_view(),
+            Action::ToggleHelp => self.toggle_help(),
         }
     }
 
@@ -241,6 +245,13 @@ impl App {
         } else {
             self.my_jobs_only = false;
             self.state.select(Some(0));
+        }
+    }
+    pub fn toggle_help(&mut self) -> () {
+        if self.show_help == false {
+            self.show_help = true
+        } else {
+            self.show_help = false
         }
     }
 }

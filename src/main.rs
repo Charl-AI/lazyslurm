@@ -17,7 +17,7 @@ use crate::tui::Tui;
 
 fn main() -> Result<()> {
     let app = App::new();
-    let tick_rate = Duration::from_millis(250);
+    let tick_rate = Duration::from_millis(100);
     let mut tui = Tui::new();
     tui.enter();
 
@@ -54,8 +54,6 @@ fn run_app(tui: &mut Tui, mut app: App, tick_rate: Duration) -> Result<()> {
 
 fn handle_keys(key: KeyEvent) -> Action {
     match key.code {
-        //KeyCode::Left | KeyCode::Char('h') => app.on_left(),
-        //KeyCode::Right | KeyCode::Char('l') => app.on_right(),
         KeyCode::Up | KeyCode::Char('k') => Action::Up,
         KeyCode::Down | KeyCode::Char('j') => Action::Down,
         KeyCode::Home | KeyCode::Char('g') => Action::Home,
@@ -67,6 +65,7 @@ fn handle_keys(key: KeyEvent) -> Action {
         KeyCode::Char('q') => Action::Quit,
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::Quit,
         KeyCode::Tab => Action::ToggleView,
+        KeyCode::Char('?') => Action::ToggleHelp,
         _ => Action::Tick,
     }
 }

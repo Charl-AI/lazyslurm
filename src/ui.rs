@@ -8,6 +8,27 @@ use ratatui::{
 
 use crate::app::{App, Job};
 
+const HELP: &str = "LazySLURM is for monitoring and managing SLURM jobs.
+It provides a TUI experience for these commands:
+`squeue`, `scancel`, `sattach`
+
+Keymaps:
+q / Ctrl-C           : quit LazySlURM
+?                    : toggle help window
+<tab>                : view only my jobs (toggle)
+
+j / <Down arrow key> : next row
+k / <Up arrow key>   : previous row
+Ctrl-d / PageDown    : down 5 rows
+Ctrl-u / PageUp      : up 5 rows
+G / End              : go to last row
+g / Home             : go to first row
+
+x                    : kill job
+a                    : attach to job
+
+";
+
 fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
     jobs.iter()
         .map(|j| {
@@ -194,22 +215,30 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         &mut app.state,
     );
     let idx = app.state.selected().unwrap();
-    if app.jobs.len() > 0 {
-        let job = &app.jobs[idx];
-        f.render_widget(
-            get_job_details(&job).block(Block::new().borders(Borders::ALL).title_top("Details")),
-            inner_layout[1],
-        );
+    if app.show_help == false {
+        if app.jobs.len() > 0 {
+            let job = &app.jobs[idx];
+            f.render_widget(
+                get_job_details(&job)
+                    .block(Block::new().borders(Borders::ALL).title_top("Details")),
+                inner_layout[1],
+            );
+        } else {
+            f.render_widget(
+                Paragraph::new(format!("No Jobs in queue for user: {}", app.my_user))
+                    .block(Block::new().borders(Borders::ALL).title_top("Details")),
+                inner_layout[1],
+            );
+        }
     } else {
         f.render_widget(
-            Paragraph::new(format!("No Jobs in queue for user: {}", app.my_user))
-                .block(Block::new().borders(Borders::ALL).title_top("Details")),
+            Paragraph::new(HELP).block(Block::new().borders(Borders::ALL).title_top("Help")),
             inner_layout[1],
-        );
+        )
     }
     f.render_widget(
         Paragraph::new(
-            "q: quit | k: up | j: down | a: attach to job | x: cancel job | <tab>: show only my jobs (toggle)",
+            "?: show help | q: quit | k: up | j: down | a: attach to job | x: cancel job | <tab>: show only my jobs (toggle)",
         ),
         outer_layout[2],
     );

@@ -1,6 +1,6 @@
 [package]
 name = "lazyslurm"
-version = "0.2.0"
+version = "1.0.0"
 authors = ["C Jones"]
 repository = "github.com/Charl-AI/lazyslurm"
 edition = "2021"

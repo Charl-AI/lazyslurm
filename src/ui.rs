@@ -42,16 +42,16 @@ fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
                     Style::default().fg(Color::Yellow),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.partition, max = 11),
-                    Style::default().fg(Color::Green),
-                ),
-                Span::styled(
                     format!(" {:<max$.max$} ", j.user, max = 6),
                     Style::default().fg(Color::Blue),
                 ),
                 Span::styled(
                     format!(" {:<max$.max$} ", j.timeused, max = 11),
                     Style::default().fg(Color::Cyan),
+                ),
+                Span::styled(
+                    format!(" {:<max$.max$} ", j.partition, max = 11),
+                    Style::default().fg(Color::Green),
                 ),
                 Span::styled(
                     format!(" {:<max$.max$}", j.name, max = 100),

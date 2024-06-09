@@ -171,9 +171,9 @@ fn get_job_details(job: &Job) -> Paragraph {
         Span::raw(" "),
         Span::styled(&job.tres, Style::default()),
     ]);
-    let command = Line::from(vec![
+    let name = Line::from(vec![
         Span::styled(
-            format!("{:<max$.max$}", "Command", max = max_width),
+            format!("{:<max$.max$}", "Name", max = max_width),
             Style::default().fg(Color::Yellow),
         ),
         Span::raw(" "),
@@ -189,8 +189,8 @@ fn get_job_details(job: &Job) -> Paragraph {
     ]);
 
     let text = Text::from(vec![
-        status, reason, user, jobid, arrayid, array_step, partition, nodelist, submittime,
-        starttime, timelimit, timeused, tres, command, priority,
+        status, reason, name, user, jobid, arrayid, array_step, partition, nodelist, submittime,
+        starttime, timelimit, timeused, tres, priority,
     ]);
 
     Paragraph::new(text)

@@ -27,7 +27,7 @@ Ctrl-u | PageUp      : up 5 rows
 
 ## Filtering jobs
 
-The live filter box accepts arbitrary regex, which
+The live filter box accepts arbitrary regex which
 will be matched against all job details. For example:
 
 cj1917               : jobs from user cj1917
@@ -37,6 +37,9 @@ run.sh               : jobs with run.sh in their name
 
 lory|loki            : jobs on lory OR loki
 loki.*gpus=2         : jobs on loki AND with 2 GPUs
+
+NB: using .* for regex AND is order-sensitive
+i.e. the first case must match before the second.
 ";
 
 fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {

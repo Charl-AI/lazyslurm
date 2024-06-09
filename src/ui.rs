@@ -157,7 +157,7 @@ fn get_job_details(job: &Job) -> Paragraph {
     ]);
     let timeused = Line::from(vec![
         Span::styled(
-            format!("{:<max$.max$}", "RunningTime", max = max_width),
+            format!("{:<max$.max$}", "TimeUsed", max = max_width),
             Style::default().fg(Color::Yellow),
         ),
         Span::raw(" "),

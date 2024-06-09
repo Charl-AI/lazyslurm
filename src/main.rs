@@ -43,7 +43,7 @@ fn run_app(tui: &mut Tui, mut app: App, tick_rate: Duration) -> Result<()> {
         }
 
         if last_tick.elapsed() >= tick_rate {
-            app.update(Action::Tick);
+            app.update(Some(Action::Tick));
             last_tick = Instant::now();
         }
         if app.should_quit {
@@ -52,20 +52,23 @@ fn run_app(tui: &mut Tui, mut app: App, tick_rate: Duration) -> Result<()> {
     }
 }
 
-fn handle_keys(key: KeyEvent) -> Action {
+fn handle_keys(key: KeyEvent) -> Option<Action> {
     match key.code {
-        KeyCode::Up | KeyCode::Char('k') => Action::Up,
-        KeyCode::Down | KeyCode::Char('j') => Action::Down,
-        KeyCode::Home | KeyCode::Char('g') => Action::Home,
-        KeyCode::End | KeyCode::Char('G') => Action::End,
-        KeyCode::PageDown => Action::PageDown,
-        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::PageDown,
-        KeyCode::PageUp => Action::PageUp,
-        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::PageUp,
-        KeyCode::Char('q') => Action::Quit,
-        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::Quit,
-        KeyCode::Tab => Action::ToggleView,
-        KeyCode::Char('?') => Action::ToggleHelp,
-        _ => Action::Tick,
+        KeyCode::Esc => Some(Action::ResetView),
+        KeyCode::Up | KeyCode::Char('k') => Some(Action::Up),
+        KeyCode::Down | KeyCode::Char('j') => Some(Action::Down),
+        KeyCode::Home | KeyCode::Char('g') => Some(Action::Home),
+        KeyCode::End | KeyCode::Char('G') => Some(Action::End),
+        KeyCode::PageDown => Some(Action::PageDown),
+        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Some(Action::PageDown)
+        }
+        KeyCode::PageUp => Some(Action::PageUp),
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::PageUp),
+        KeyCode::Char('q') => Some(Action::Quit),
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::Quit),
+        KeyCode::Tab => Some(Action::ToggleView),
+        KeyCode::Char('?') => Some(Action::ToggleHelp),
+        _ => None,
     }
 }

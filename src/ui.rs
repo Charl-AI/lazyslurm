@@ -6,27 +6,23 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
-use crate::app::{App, Job};
+use crate::app::{App, Job, View};
 
-const HELP: &str = "LazySLURM is for monitoring and managing SLURM jobs.
-It provides a TUI experience for these commands:
-`squeue`, `scancel`, `sattach`
+const HELP_SHORT: &str = "q: quit | ?: help (toggle) | <tab>: show only my jobs (toggle)";
+const HELP: &str = "lazyslurm is for monitoring SLURM jobs.
 
 Keymaps:
-q / Ctrl-C           : quit LazySlURM
-?                    : toggle help window
+q | Ctrl-c           : quit
+?                    : help (toggle)
 <tab>                : view only my jobs (toggle)
+<esc>                : return to job detail view
 
-j / <Down arrow key> : next row
-k / <Up arrow key>   : previous row
-Ctrl-d / PageDown    : down 5 rows
-Ctrl-u / PageUp      : up 5 rows
-G / End              : go to last row
-g / Home             : go to first row
-
-x                    : kill job
-a                    : attach to job
-
+j | <Down arrow key> : next row
+k | <Up arrow key>   : previous row
+G | End              : go to last row
+g | Home             : go to first row
+Ctrl-d | PageDown    : down 5 rows
+Ctrl-u | PageUp      : up 5 rows
 ";
 
 fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
@@ -187,14 +183,32 @@ fn get_job_details(job: &Job) -> Paragraph {
         Span::raw(" "),
         Span::styled(&job.priority, Style::default()),
     ]);
+    let workdir = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "Workdir", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.workdir, Style::default()),
+    ]);
+    let command = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "Command", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.command, Style::default()),
+    ]);
 
     let text = Text::from(vec![
         status, reason, name, user, jobid, arrayid, array_step, partition, nodelist, submittime,
-        starttime, timelimit, timeused, tres, priority,
+        starttime, timelimit, timeused, tres, priority, workdir, command,
     ]);
 
     Paragraph::new(text)
 }
+
+//fn get_cluster_info() -> Paragraph {}
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let outer_layout = Layout::default()
@@ -228,37 +242,36 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
             .repeat_highlight_symbol(true),
         inner_layout[0],
-        &mut app.state,
+        &mut app.list_state,
     );
 
-    if app.show_help == false {
-        if app.jobs.len() > 0 {
-            if app.state.selected().unwrap() > app.jobs.len() - 1 {
-                app.end()
+    match app.view_state {
+        View::Details => {
+            if app.jobs.len() > 0 {
+                // guard against indexing out of range. This can happen if a
+                // job is killed when the cursor is on the last line
+                if app.list_state.selected().unwrap() > app.jobs.len() - 1 {
+                    app.end()
+                }
+                let job = &app.jobs[app.list_state.selected().unwrap()];
+                f.render_widget(
+                    get_job_details(&job)
+                        .block(Block::new().borders(Borders::ALL).title_top("Details")),
+                    inner_layout[1],
+                );
+            } else {
+                f.render_widget(
+                    Paragraph::new(format!("No Jobs in queue for user: {}", app.my_user))
+                        .block(Block::new().borders(Borders::ALL).title_top("Details")),
+                    inner_layout[1],
+                );
             }
-            let job = &app.jobs[app.state.selected().unwrap()];
-            f.render_widget(
-                get_job_details(&job)
-                    .block(Block::new().borders(Borders::ALL).title_top("Details")),
-                inner_layout[1],
-            );
-        } else {
-            f.render_widget(
-                Paragraph::new(format!("No Jobs in queue for user: {}", app.my_user))
-                    .block(Block::new().borders(Borders::ALL).title_top("Details")),
-                inner_layout[1],
-            );
         }
-    } else {
-        f.render_widget(
+        View::Help => f.render_widget(
             Paragraph::new(HELP).block(Block::new().borders(Borders::ALL).title_top("Help")),
             inner_layout[1],
-        )
-    }
-    f.render_widget(
-        Paragraph::new(
-            "?: show help | q: quit | k: up | j: down | a: attach to job | x: cancel job | <tab>: show only my jobs (toggle)",
         ),
-        outer_layout[2],
-    );
+    }
+
+    f.render_widget(Paragraph::new(HELP_SHORT), outer_layout[2]);
 }

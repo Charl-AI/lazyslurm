@@ -12,10 +12,12 @@ pub enum Action {
     PageUp,
     ToggleView,
     ToggleHelp,
-    //ConfirmAction
-    //CancelAction
-    //Attach,
-    //Kill,
+    ResetView,
+}
+
+pub enum View {
+    Details,
+    Help,
 }
 
 pub struct Job {
@@ -35,6 +37,8 @@ pub struct Job {
     pub partition: String,
     pub nodelist: String,
     pub priority: String,
+    pub workdir: String,
+    pub command: String,
 }
 
 fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
@@ -56,6 +60,8 @@ fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
         "ArrayJobID",
         "ArrayTaskID",
         "priority",
+        "workdir",
+        "command",
     ];
     let output_format = fields
         .map(|s| s.to_owned() + ":" + output_separator)
@@ -101,6 +107,8 @@ fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
                 array_id: parts[13].to_owned(),
                 array_step: parts[14].to_owned(),
                 priority: parts[15].to_owned(),
+                workdir: parts[16].to_owned(),
+                command: parts[17].to_owned(),
             })
         })
         .collect();
@@ -110,8 +118,8 @@ fn get_jobs(my_jobs_only: bool, my_user: &String) -> Vec<Job> {
 pub struct App {
     pub should_quit: bool,
     pub jobs: Vec<Job>,
-    pub state: ListState,
-    pub show_help: bool,
+    pub list_state: ListState,
+    pub view_state: View,
     pub my_jobs_only: bool,
     pub my_user: String,
 }
@@ -133,25 +141,27 @@ impl App {
         App {
             should_quit: false,
             jobs: get_jobs(false, &my_user),
-            state,
-            show_help: false,
+            list_state: state,
+            view_state: View::Details,
             my_jobs_only: false,
             my_user,
         }
     }
 
-    pub fn update(&mut self, action: Action) -> () {
+    pub fn update(&mut self, action: Option<Action>) -> () {
         match action {
-            Action::Quit => self.should_quit = true,
-            Action::Tick => self.jobs = get_jobs(self.my_jobs_only, &self.my_user),
-            Action::Up => self.previous(),
-            Action::Down => self.next(),
-            Action::Home => self.home(),
-            Action::End => self.end(),
-            Action::PageDown => self.down_5(),
-            Action::PageUp => self.up_5(),
-            Action::ToggleView => self.toggle_job_view(),
-            Action::ToggleHelp => self.toggle_help(),
+            Some(Action::Quit) => self.should_quit = true,
+            Some(Action::Tick) => self.jobs = get_jobs(self.my_jobs_only, &self.my_user),
+            Some(Action::Up) => self.previous(),
+            Some(Action::Down) => self.next(),
+            Some(Action::Home) => self.home(),
+            Some(Action::End) => self.end(),
+            Some(Action::PageDown) => self.down_5(),
+            Some(Action::PageUp) => self.up_5(),
+            Some(Action::ToggleView) => self.toggle_job_view(),
+            Some(Action::ToggleHelp) => self.toggle_help(),
+            Some(Action::ResetView) => self.reset_view(),
+            None => (),
         }
     }
 
@@ -160,7 +170,7 @@ impl App {
             return;
         }
 
-        let i = match self.state.selected() {
+        let i = match self.list_state.selected() {
             Some(i) => {
                 if i >= self.jobs.len() - 1 {
                     0
@@ -170,14 +180,14 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.list_state.select(Some(i));
     }
     pub fn previous(&mut self) {
         if self.jobs.len() == 0 {
             return;
         }
 
-        let i = match self.state.selected() {
+        let i = match self.list_state.selected() {
             Some(i) => {
                 if i == 0 {
                     self.jobs.len() - 1
@@ -187,7 +197,7 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.list_state.select(Some(i));
     }
 
     pub fn down_5(&mut self) -> () {
@@ -195,7 +205,7 @@ impl App {
             return;
         }
 
-        let i = match self.state.selected() {
+        let i = match self.list_state.selected() {
             Some(i) => {
                 if i >= self.jobs.len() - 5 {
                     self.jobs.len() - 1
@@ -205,14 +215,14 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.list_state.select(Some(i));
     }
     pub fn up_5(&mut self) -> () {
         if self.jobs.len() == 0 {
             return;
         }
 
-        let i = match self.state.selected() {
+        let i = match self.list_state.selected() {
             Some(i) => {
                 if i <= 5 {
                     0
@@ -222,36 +232,39 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.list_state.select(Some(i));
     }
 
     pub fn home(&mut self) -> () {
         if self.jobs.len() == 0 {
             return;
         }
-        self.state.select(Some(0))
+        self.list_state.select(Some(0));
     }
     pub fn end(&mut self) -> () {
         if self.jobs.len() == 0 {
             return;
         }
-        self.state.select(Some(self.jobs.len() - 1))
+        self.list_state.select(Some(self.jobs.len() - 1));
     }
 
     pub fn toggle_job_view(&mut self) -> () {
         if self.my_jobs_only == false {
             self.my_jobs_only = true;
-            self.state.select(Some(0));
+            self.list_state.select(Some(0));
         } else {
             self.my_jobs_only = false;
-            self.state.select(Some(0));
+            self.list_state.select(Some(0));
         }
     }
     pub fn toggle_help(&mut self) -> () {
-        if self.show_help == false {
-            self.show_help = true
-        } else {
-            self.show_help = false
+        match self.view_state {
+            View::Help => self.view_state = View::Details,
+            _ => self.view_state = View::Help,
         }
+    }
+
+    pub fn reset_view(&mut self) -> () {
+        self.view_state = View::Details
     }
 }

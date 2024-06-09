@@ -1,11 +1,8 @@
-//#![allow(dead_code)]
-//#![allow(unused_imports)]
-//#![allow(unused_variables)]
-
 mod app;
 mod tui;
 mod ui;
 
+use app::EditorState;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use std::{
     io::Result,
@@ -36,7 +33,7 @@ fn run_app(tui: &mut Tui, mut app: App, tick_rate: Duration) -> Result<()> {
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    let action = handle_keys(key);
+                    let action = handle_keys(key, &app);
                     app.update(action);
                 }
             }
@@ -52,23 +49,35 @@ fn run_app(tui: &mut Tui, mut app: App, tick_rate: Duration) -> Result<()> {
     }
 }
 
-fn handle_keys(key: KeyEvent) -> Option<Action> {
-    match key.code {
-        KeyCode::Esc => Some(Action::ResetView),
-        KeyCode::Up | KeyCode::Char('k') => Some(Action::Up),
-        KeyCode::Down | KeyCode::Char('j') => Some(Action::Down),
-        KeyCode::Home | KeyCode::Char('g') => Some(Action::Home),
-        KeyCode::End | KeyCode::Char('G') => Some(Action::End),
-        KeyCode::PageDown => Some(Action::PageDown),
-        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(Action::PageDown)
-        }
-        KeyCode::PageUp => Some(Action::PageUp),
-        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::PageUp),
-        KeyCode::Char('q') => Some(Action::Quit),
-        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::Quit),
-        KeyCode::Tab => Some(Action::ToggleView),
-        KeyCode::Char('?') => Some(Action::ToggleHelp),
-        _ => None,
+fn handle_keys(key: KeyEvent, app: &App) -> Option<Action> {
+    match app.editor_state {
+        EditorState::Editing => match key.code {
+            KeyCode::Esc => Some(Action::ResetView),
+            KeyCode::Enter => Some(Action::ToggleFocus),
+            KeyCode::Tab => Some(Action::ToggleFocus),
+            _ => Some(Action::InputKey(key)),
+        },
+        EditorState::Normal => match key.code {
+            KeyCode::Esc => Some(Action::ResetView),
+            KeyCode::Up | KeyCode::Char('k') => Some(Action::Up),
+            KeyCode::Down | KeyCode::Char('j') => Some(Action::Down),
+            KeyCode::Home | KeyCode::Char('g') => Some(Action::Home),
+            KeyCode::End | KeyCode::Char('G') => Some(Action::End),
+            KeyCode::PageDown => Some(Action::PageDown),
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                Some(Action::PageDown)
+            }
+            KeyCode::PageUp => Some(Action::PageUp),
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                Some(Action::PageUp)
+            }
+            KeyCode::Char('q') => Some(Action::Quit),
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                Some(Action::Quit)
+            }
+            KeyCode::Char('?') => Some(Action::ToggleHelp),
+            KeyCode::Tab => Some(Action::ToggleFocus),
+            _ => None,
+        },
     }
 }

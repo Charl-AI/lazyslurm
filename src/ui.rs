@@ -6,16 +6,17 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
-use crate::app::{App, Job, View};
+use crate::app::{App, EditorState, Job, ViewState};
 
-const HELP_SHORT: &str = "q: quit | ?: help (toggle) | <tab>: show only my jobs (toggle)";
+const HELP_SHORT: &str = "q: quit | ?: toggle help | <tab>: toggle focus";
 const HELP: &str = "lazyslurm is for monitoring SLURM jobs.
 
-Keymaps:
+## Keymaps
+
 q | Ctrl-c           : quit
-?                    : help (toggle)
-<tab>                : view only my jobs (toggle)
-<esc>                : return to job detail view
+?                    : toggle help
+<tab>                : toggle focus
+<esc>                : reset view
 
 j | <Down arrow key> : next row
 k | <Up arrow key>   : previous row
@@ -23,6 +24,19 @@ G | End              : go to last row
 g | Home             : go to first row
 Ctrl-d | PageDown    : down 5 rows
 Ctrl-u | PageUp      : up 5 rows
+
+## Filtering jobs
+
+The live filter box accepts arbitrary regex, which
+will be matched against all job details. For example:
+
+cj1917               : jobs from user cj1917
+loki                 : jobs on node loki
+gpu=4                : jobs using 4 GPUs
+run.sh               : jobs with run.sh in their name
+
+lory|loki            : jobs on lory OR loki
+loki.*gpus=2         : jobs on loki AND with 2 GPUs
 ";
 
 fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
@@ -208,14 +222,13 @@ fn get_job_details(job: &Job) -> Paragraph {
     Paragraph::new(text)
 }
 
-//fn get_cluster_info() -> Paragraph {}
-
 pub fn draw(f: &mut Frame, app: &mut App) {
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(1),
             Constraint::Fill(1),
+            Constraint::Length(3),
             Constraint::Length(1),
         ])
         .split(f.size());
@@ -236,17 +249,37 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         )),
         outer_layout[0],
     );
-    f.render_stateful_widget(
-        List::new(get_short_jobs_list(&app.jobs))
-            .block(Block::new().borders(Borders::ALL).title_top("Jobs"))
-            .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
-            .repeat_highlight_symbol(true),
-        inner_layout[0],
-        &mut app.list_state,
-    );
+
+    match app.editor_state {
+        EditorState::Editing => {
+            f.render_stateful_widget(
+                List::new(get_short_jobs_list(&app.jobs))
+                    .block(Block::new().borders(Borders::ALL).title_top("Jobs"))
+                    .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
+                    .repeat_highlight_symbol(true),
+                inner_layout[0],
+                &mut app.list_state,
+            );
+        }
+        EditorState::Normal => {
+            f.render_stateful_widget(
+                List::new(get_short_jobs_list(&app.jobs))
+                    .block(
+                        Block::new()
+                            .borders(Borders::ALL)
+                            .title_top("Jobs")
+                            .border_style(Color::Green),
+                    )
+                    .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
+                    .repeat_highlight_symbol(true),
+                inner_layout[0],
+                &mut app.list_state,
+            );
+        }
+    }
 
     match app.view_state {
-        View::Details => {
+        ViewState::Details => {
             if app.jobs.len() > 0 {
                 // guard against indexing out of range. This can happen if a
                 // job is killed when the cursor is on the last line
@@ -261,17 +294,34 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 );
             } else {
                 f.render_widget(
-                    Paragraph::new(format!("No Jobs in queue for user: {}", app.my_user))
-                        .block(Block::new().borders(Borders::ALL).title_top("Details")),
+                    Paragraph::new(format!(
+                        "No Jobs matching pattern : {}",
+                        &app.text_area.lines().concat()
+                    ))
+                    .block(Block::new().borders(Borders::ALL).title_top("Details")),
                     inner_layout[1],
                 );
             }
         }
-        View::Help => f.render_widget(
+        ViewState::Help => f.render_widget(
             Paragraph::new(HELP).block(Block::new().borders(Borders::ALL).title_top("Help")),
             inner_layout[1],
         ),
     }
 
-    f.render_widget(Paragraph::new(HELP_SHORT), outer_layout[2]);
+    match app.editor_state {
+        EditorState::Normal => app.text_area.set_block(
+            Block::new()
+                .borders(Borders::ALL)
+                .title_top("Live filter (regex)"),
+        ),
+        EditorState::Editing => app.text_area.set_block(
+            Block::new()
+                .borders(Borders::ALL)
+                .border_style(Color::Green)
+                .title_top("Live filter (regex)"),
+        ),
+    }
+    f.render_widget(app.text_area.widget(), outer_layout[2]);
+    f.render_widget(Paragraph::new(HELP_SHORT), outer_layout[3]);
 }

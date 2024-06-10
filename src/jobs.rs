@@ -96,9 +96,79 @@ pub fn get_jobs(filter_re: &String) -> Vec<Job> {
             if parts.len() != fields.len() + 1 {
                 return None;
             }
-            let job = Job::from_str_parts(parts);
+            let mut job = Job::from_str_parts(parts);
+            parse_paths(&mut job);
             return Some(job);
         })
         .collect();
     jobs
+}
+
+// STDOUT as retrieved by squeue looks like this: slurm.%N.%j.log,
+// we need to interpolate the terms into the actual path.
+fn parse_paths(job: &mut Job) {
+    job.STDOUT = interpolate_path(&job.STDOUT, job);
+    job.STDERR = interpolate_path(&job.STDERR, job);
+}
+
+fn interpolate_path(pattern: &str, job: &Job) -> String {
+    let mut result = String::new();
+    let mut chars = pattern.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '%' {
+            if let Some(next_c) = chars.peek() {
+                match next_c {
+                    '\\' => {
+                        result.push(c);
+                        chars.next(); // Consume the next character
+                    }
+                    '%' => {
+                        result.push('%');
+                        chars.next(); // Consume the next character
+                    }
+                    _ => {
+                        let mut pad_specifier = String::new();
+                        while let Some(d) = chars.peek() {
+                            if d.is_digit(10) {
+                                pad_specifier.push(*d);
+                                chars.next();
+                            } else {
+                                break;
+                            }
+                        }
+                        let specifier = chars.next().unwrap();
+                        if let Some(mut replacement) = replace_char(specifier, job) {
+                            if !pad_specifier.is_empty() && specifier.is_numeric() {
+                                let width: usize = pad_specifier.parse().unwrap_or(0);
+                                replacement = format!("{:0width$}", replacement, width = width);
+                            }
+                            result.push_str(&replacement);
+                        } else {
+                            result.push(c);
+                            result.push(specifier);
+                        }
+                    }
+                }
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    result
+}
+
+// see `man squeue` for all valid interpolations
+fn replace_char(symbol: char, job: &Job) -> Option<String> {
+    match symbol {
+        // NB this does not cover some valid cases (A,J,n,s,t)
+        // because I'm not too sure how to do them atm.
+        // this should be enough for most cases.
+        'a' => Some(job.ArrayJobID.to_owned()),
+        'N' => Some(job.NodeList.to_owned()),
+        'u' => Some(job.UserName.to_owned()),
+        'x' => Some(job.Name.to_owned()),
+        'j' => Some(job.JobID.to_owned()),
+        _ => None,
+    }
 }

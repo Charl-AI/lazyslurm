@@ -168,20 +168,16 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     match app.view_state {
-        ViewState::Details => {
-            if app.jobs.len() > 0 {
-                // guard against indexing out of range. This can happen if a
-                // job is killed when the cursor is on the last line
-                if app.list_state.selected().unwrap() > app.jobs.len() - 1 {
-                    app.end()
-                }
-                let job = &app.jobs[app.list_state.selected().unwrap()];
+        ViewState::Details => match app.list_state.selected() {
+            Some(i) => {
+                let job = &app.jobs[i];
                 f.render_widget(
                     get_job_details(&job)
                         .block(Block::new().borders(Borders::ALL).title_top("Details")),
                     inner_layout[1],
                 );
-            } else {
+            }
+            None => {
                 f.render_widget(
                     Paragraph::new(format!(
                         "No Jobs matching pattern : {}",
@@ -191,7 +187,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     inner_layout[1],
                 );
             }
-        }
+        },
         ViewState::Help => f.render_widget(
             Paragraph::new(HELP).block(Block::new().borders(Borders::ALL).title_top("Help")),
             inner_layout[1],

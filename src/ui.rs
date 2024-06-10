@@ -6,7 +6,8 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
-use crate::app::{App, EditorState, Job, ViewState};
+use crate::app::{App, EditorState, ViewState};
+use crate::jobs::Job;
 
 const HELP_SHORT: &str = "q: quit | ?: toggle help | <tab>: toggle focus";
 const HELP: &str = "lazyslurm is for monitoring SLURM jobs.

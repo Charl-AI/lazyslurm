@@ -1,4 +1,5 @@
 mod app;
+mod jobs;
 mod tui;
 mod ui;
 

@@ -47,31 +47,31 @@ fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
         .map(|j| {
             ListItem::new(Line::from(vec![
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.state_compact, max = 2),
+                    format!(" {:<max$.max$} ", j.StateCompact, max = 2),
                     Style::default(),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.job_id, max = 6),
+                    format!(" {:<max$.max$} ", j.JobID, max = 6),
                     Style::default().fg(Color::Yellow),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.user, max = 6),
+                    format!(" {:<max$.max$} ", j.UserName, max = 6),
                     Style::default().fg(Color::Blue),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.timeused, max = 11),
+                    format!(" {:<max$.max$} ", j.TimeUsed, max = 11),
                     Style::default().fg(Color::Cyan),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.nodelist, max = 9),
+                    format!(" {:<max$.max$} ", j.NodeList, max = 9),
                     Style::default().fg(Color::Magenta),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.partition, max = 11),
+                    format!(" {:<max$.max$} ", j.Partition, max = 11),
                     Style::default().fg(Color::Green),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$}", j.name, max = 100),
+                    format!(" {:<max$.max$}", j.Name, max = 100),
                     Style::default().fg(Color::LightRed),
                 ),
             ]))
@@ -79,178 +79,34 @@ fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
         .collect()
 }
 
+fn style_job_field<'a>(field: String, value: String, max_width: usize) -> Line<'a> {
+    Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", { field }, max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(value, Style::default()),
+    ])
+}
+
 fn get_job_details(job: &Job) -> Paragraph {
-    let max_width = 11;
-    let status = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Status", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(
-            format!("{} ({})", job.state, job.state_compact),
-            Style::default(),
-        ),
-    ]);
-    let user = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "User", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.user, Style::default()),
-    ]);
-    let reason = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Reason", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.reason, Style::default()),
-    ]);
-    let jobid = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "JobID", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.job_id, Style::default()),
-    ]);
-    let arrayid = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "ArrayID", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.array_id, Style::default()),
-    ]);
-    let array_step = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "ArrayStep", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.array_step, Style::default()),
-    ]);
-    let partition = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Partition", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.partition, Style::default()),
-    ]);
-    let nodelist = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "NodeList", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.nodelist, Style::default()),
-    ]);
-    let reqnodes = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "ReqNodes", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.reqnodes, Style::default()),
-    ]);
-    let submittime = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "SubmitTime", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.submittime, Style::default()),
-    ]);
-    let starttime = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "StartTime", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.starttime, Style::default()),
-    ]);
-    let timelimit = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "TimeLimit", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.timelimit, Style::default()),
-    ]);
-    let timeused = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "TimeUsed", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.timeused, Style::default()),
-    ]);
-    let tres = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "TRES", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.tres, Style::default()),
-    ]);
-    let name = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Name", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.name, Style::default()),
-    ]);
-    let priority = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Priority", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.priority, Style::default()),
-    ]);
-    let workdir = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Workdir", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.workdir, Style::default()),
-    ]);
-    let command = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Command", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.command, Style::default()),
-    ]);
-    let stdout = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Stdout", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.stdout, Style::default()),
-    ]);
-    let stderr = Line::from(vec![
-        Span::styled(
-            format!("{:<max$.max$}", "Stderr", max = max_width),
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw(" "),
-        Span::styled(&job.stderr, Style::default()),
-    ]);
+    let max_width = 12;
+    let fields = Job::field_names();
+    let values = Job::field_values(job);
 
-    let text = Text::from(vec![
-        status, reason, name, user, jobid, arrayid, array_step, partition, nodelist, reqnodes,
-        submittime, starttime, timelimit, timeused, tres, priority, workdir, command, stdout,
-        stderr,
-    ]);
-
+    let lines: Vec<Line> = fields
+        .iter()
+        .zip(values.iter())
+        .map(|(f, v)| {
+            style_job_field(
+                f.to_owned().to_string(),
+                v.to_owned().to_string(),
+                max_width,
+            )
+        })
+        .collect();
+    let text = Text::from(lines);
     Paragraph::new(text)
 }
 

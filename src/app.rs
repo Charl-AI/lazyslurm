@@ -24,69 +24,87 @@ pub enum ViewState {
     Help,
 }
 
-pub struct Job {
-    pub job_id: String,
-    pub array_id: String,
-    pub array_step: String,
-    pub name: String,
-    pub state: String,
-    pub state_compact: String,
-    pub reason: String,
-    pub user: String,
-    pub timeused: String,
-    pub starttime: String,
-    pub submittime: String,
-    pub timelimit: String,
-    pub tres: String,
-    pub partition: String,
-    pub nodelist: String,
-    pub reqnodes: String,
-    pub priority: String,
-    pub workdir: String,
-    pub command: String,
-    pub stdout: String,
-    pub stderr: String,
+// This macro is a bit crazy.
+// the reason we have it is because the names of the fields were
+// being repeated in lots of places: the command given to squeue,
+// constructing the struct, and using the struct.
+// By converting the field names and values to vectors of strings,
+// we can shorten the code. NB: this means that the name of each
+// field should also be the command given to squeue to retrieve it.
+macro_rules! make_field_names_available {
+    (struct $name:ident {
+        $($field_name:ident: $field_type:ty,)*
+    }) => {
+        #[allow(non_snake_case)]
+        pub struct $name {
+            $(pub $field_name: $field_type,)*
+        }
+
+        impl $name {
+            pub fn field_names() -> Vec<&'static str> {
+                vec![$(stringify!($field_name)),*]
+            }
+            pub fn field_values(&self) -> Vec<String>{
+                vec![
+                    $(self.$field_name.clone().to_string()),*
+                ]
+            }
+            fn from_str_parts(parts: Vec<&str>) -> Self {
+                let mut iter = parts.into_iter();
+                Self {
+                    $($field_name: iter.next().unwrap().to_string()),*
+                }
+            }
+        }
+    }
 }
+
+make_field_names_available!(
+    struct Job {
+        StateCompact: String,
+        State: String,
+        Reason: String,
+        Name: String,
+        UserName: String,
+        JobID: String,
+        ArrayJobID: String,
+        ArrayTaskID: String,
+        Partition: String,
+        NodeList: String,
+        ReqNodes: String,
+        SubmitTime: String,
+        StartTime: String,
+        TimeLimit: String,
+        TimeUsed: String,
+        TRES: String,
+        Priority: String,
+        WorkDir: String,
+        Command: String,
+        STDOUT: String,
+        STDERR: String,
+    }
+);
 
 fn get_jobs(filter_re: &String) -> Vec<Job> {
     let output_separator = "###";
-    let fields = [
-        "state",
-        "statecompact",
-        "reason",
-        "name",
-        "username",
-        "jobid",
-        "ArrayJobID",
-        "ArrayTaskID",
-        "partition",
-        "nodelist",
-        "reqnodes",
-        "submittime",
-        "starttime",
-        "timelimit",
-        "timeused",
-        "tres",
-        "priority",
-        "workdir",
-        "command",
-        "stdout",
-        "stderr",
-    ];
-    let output_format = fields
-        .map(|s| s.to_owned() + ":" + output_separator)
-        .join(",");
+    let fields = Job::field_names().to_owned();
+    let output_format: Vec<String> = fields
+        .iter()
+        .map(|s| s.to_string().to_owned() + ":" + output_separator)
+        .collect();
+    let format_str: String = output_format.join(",");
 
     let re = RegexBuilder::new(filter_re)
         .case_insensitive(true)
         .build()
+        // if invalid regex, just use ""
         .unwrap_or(RegexBuilder::new("").build().unwrap());
 
     let jobs: Vec<Job> = Command::new("squeue")
         .arg("--array")
         .arg("--noheader")
         .arg("--Format")
-        .arg(&output_format)
+        .arg(format_str)
         .output()
         .expect("failed to execute squeue")
         .stdout
@@ -97,34 +115,11 @@ fn get_jobs(filter_re: &String) -> Vec<Job> {
                 return None;
             }
             let parts: Vec<_> = l.split(output_separator).collect();
-
             if parts.len() != fields.len() + 1 {
                 return None;
             }
-
-            Some(Job {
-                state: parts[0].to_owned(),
-                state_compact: parts[1].to_owned(),
-                reason: parts[2].to_owned(),
-                name: parts[3].to_owned(),
-                user: parts[4].to_owned(),
-                job_id: parts[5].to_owned(),
-                array_id: parts[6].to_owned(),
-                array_step: parts[7].to_owned(),
-                partition: parts[8].to_owned(),
-                nodelist: parts[9].to_owned(),
-                reqnodes: parts[10].to_owned(),
-                submittime: parts[11].to_owned(),
-                starttime: parts[12].to_owned(),
-                timelimit: parts[13].to_owned(),
-                timeused: parts[14].to_owned(),
-                tres: parts[15].to_owned(),
-                priority: parts[16].to_owned(),
-                workdir: parts[17].to_owned(),
-                command: parts[18].to_owned(),
-                stdout: parts[19].to_owned(),
-                stderr: parts[20].to_owned(),
-            })
+            let job = Job::from_str_parts(parts);
+            return Some(job);
         })
         .collect();
     jobs

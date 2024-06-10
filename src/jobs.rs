@@ -54,6 +54,7 @@ make_field_names_available!(
         TimeLimit: String,
         TimeUsed: String,
         TRES: String,
+        NumTasks: String,
         Priority: String,
         WorkDir: String,
         Command: String,

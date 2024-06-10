@@ -81,8 +81,15 @@ impl App<'_> {
         // e.g. if the cursor is on the last job and one is cancelled
         if self.jobs.is_empty() {
             self.list_state.select(None)
-        } else if self.list_state.selected().unwrap() > self.jobs.len() - 1 {
-            self.end()
+        } else {
+            match self.list_state.selected() {
+                None => self.home(),
+                Some(i) => {
+                    if i > self.jobs.len() - 1 {
+                        self.end()
+                    }
+                }
+            }
         }
     }
 

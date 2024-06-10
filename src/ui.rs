@@ -148,6 +148,14 @@ fn get_job_details(job: &Job) -> Paragraph {
         Span::raw(" "),
         Span::styled(&job.nodelist, Style::default()),
     ]);
+    let reqnodes = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "ReqNodes", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.reqnodes, Style::default()),
+    ]);
     let submittime = Line::from(vec![
         Span::styled(
             format!("{:<max$.max$}", "SubmitTime", max = max_width),
@@ -220,10 +228,27 @@ fn get_job_details(job: &Job) -> Paragraph {
         Span::raw(" "),
         Span::styled(&job.command, Style::default()),
     ]);
+    let stdout = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "Stdout", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.stdout, Style::default()),
+    ]);
+    let stderr = Line::from(vec![
+        Span::styled(
+            format!("{:<max$.max$}", "Stderr", max = max_width),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::raw(" "),
+        Span::styled(&job.stderr, Style::default()),
+    ]);
 
     let text = Text::from(vec![
-        status, reason, name, user, jobid, arrayid, array_step, partition, nodelist, submittime,
-        starttime, timelimit, timeused, tres, priority, workdir, command,
+        status, reason, name, user, jobid, arrayid, array_step, partition, nodelist, reqnodes,
+        submittime, starttime, timelimit, timeused, tres, priority, workdir, command, stdout,
+        stderr,
     ]);
 
     Paragraph::new(text)

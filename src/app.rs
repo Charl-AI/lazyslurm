@@ -40,9 +40,12 @@ pub struct Job {
     pub tres: String,
     pub partition: String,
     pub nodelist: String,
+    pub reqnodes: String,
     pub priority: String,
     pub workdir: String,
     pub command: String,
+    pub stdout: String,
+    pub stderr: String,
 }
 
 fn get_jobs(filter_re: &String) -> Vec<Job> {
@@ -58,6 +61,7 @@ fn get_jobs(filter_re: &String) -> Vec<Job> {
         "ArrayTaskID",
         "partition",
         "nodelist",
+        "reqnodes",
         "submittime",
         "starttime",
         "timelimit",
@@ -66,6 +70,8 @@ fn get_jobs(filter_re: &String) -> Vec<Job> {
         "priority",
         "workdir",
         "command",
+        "stdout",
+        "stderr",
     ];
     let output_format = fields
         .map(|s| s.to_owned() + ":" + output_separator)
@@ -107,14 +113,17 @@ fn get_jobs(filter_re: &String) -> Vec<Job> {
                 array_step: parts[7].to_owned(),
                 partition: parts[8].to_owned(),
                 nodelist: parts[9].to_owned(),
-                submittime: parts[10].to_owned(),
-                starttime: parts[11].to_owned(),
-                timelimit: parts[12].to_owned(),
-                timeused: parts[13].to_owned(),
-                tres: parts[14].to_owned(),
-                priority: parts[15].to_owned(),
-                workdir: parts[16].to_owned(),
-                command: parts[17].to_owned(),
+                reqnodes: parts[10].to_owned(),
+                submittime: parts[11].to_owned(),
+                starttime: parts[12].to_owned(),
+                timelimit: parts[13].to_owned(),
+                timeused: parts[14].to_owned(),
+                tres: parts[15].to_owned(),
+                priority: parts[16].to_owned(),
+                workdir: parts[17].to_owned(),
+                command: parts[18].to_owned(),
+                stdout: parts[19].to_owned(),
+                stderr: parts[20].to_owned(),
             })
         })
         .collect();

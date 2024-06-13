@@ -195,17 +195,24 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     match app.editor_state {
-        EditorState::Normal => app.text_area.set_block(
-            Block::new()
-                .borders(Borders::ALL)
-                .title_top("Live filter (regex)"),
-        ),
-        EditorState::Editing => app.text_area.set_block(
-            Block::new()
-                .borders(Borders::ALL)
-                .border_style(Color::Green)
-                .title_top("Live filter (regex)"),
-        ),
+        EditorState::Normal => {
+            app.text_area.set_block(
+                Block::new()
+                    .borders(Borders::ALL)
+                    .title_top("Live filter (regex)"),
+            );
+            app.text_area.set_cursor_style(Style::default());
+        }
+        EditorState::Editing => {
+            app.text_area.set_block(
+                Block::new()
+                    .borders(Borders::ALL)
+                    .border_style(Color::Green)
+                    .title_top("Live filter (regex)"),
+            );
+            app.text_area
+                .set_cursor_style(Style::default().add_modifier(Modifier::REVERSED));
+        }
     }
     f.render_widget(app.text_area.widget(), outer_layout[2]);
     f.render_widget(Paragraph::new(HELP_SHORT), outer_layout[3]);

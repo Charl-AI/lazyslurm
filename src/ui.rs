@@ -1,21 +1,22 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{BarChart, Block, Borders, Cell, List, ListItem, Paragraph, Row, Table},
 };
 
 use crate::app::{App, EditorState, ViewState};
-use crate::jobs::Job;
+use crate::jobs::{Job,ClusterOverview};
 
-const HELP_SHORT: &str = "q: quit | ?: toggle help | <tab>: toggle focus";
+const HELP_SHORT: &str = "q: quit | ?: toggle help | o: toggle overview | <tab>: toggle focus";
 const HELP: &str = "lazyslurm is for monitoring SLURM jobs.
 
 ## Keymaps
 
 q | Ctrl-c           : quit
 ?                    : toggle help
+o                    : toggle cluster overview
 <tab>                : toggle focus
 <esc>                : reset view
 
@@ -111,6 +112,96 @@ fn get_job_details(job: &Job) -> Paragraph {
     Paragraph::new(text)
 }
 
+fn get_job_summary(overview: &ClusterOverview) -> Table {
+    let rows = vec![
+        Row::new(vec![
+            Cell::from("Running"),
+            Cell::from(overview.jobs_running.to_string()),
+        ]),
+        Row::new(vec![
+            Cell::from("Pending"),
+            Cell::from(overview.jobs_pending.to_string()),
+        ]),
+        Row::new(vec![
+            Cell::from("Completing"),
+            Cell::from(overview.jobs_completing.to_string()),
+        ]),
+    ];
+    Table::new(rows, vec![Constraint::Length(12), Constraint::Length(6)])
+        .block(Block::default().title("Jobs").borders(Borders::ALL))
+}
+
+fn get_node_summary(overview: &ClusterOverview) -> Table {
+    let rows = vec![
+        Row::new(vec![
+            Cell::from("Allocated"),
+            Cell::from(overview.nodes_alloc.to_string()),
+        ]),
+        Row::new(vec![
+            Cell::from("Idle"),
+            Cell::from(overview.nodes_idle.to_string()),
+        ]),
+        Row::new(vec![
+            Cell::from("Down"),
+            Cell::from(overview.nodes_down.to_string()),
+        ]),
+    ];
+    Table::new(rows, vec![Constraint::Length(12), Constraint::Length(6)])
+        .block(Block::default().title("Nodes").borders(Borders::ALL))
+}
+
+
+fn get_gpu_utilization(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
+    let block = Block::default()
+        .title("GPU Utilization")
+        .borders(Borders::ALL);
+    let inner_area = block.inner(area);
+    f.render_widget(block, area);
+
+    let mut lines = Vec::new();
+    let max_label_width = overview
+        .partitions
+        .iter()
+        .map(|p| p.name.len())
+        .max()
+        .unwrap_or(10);
+
+    for partition in &overview.partitions {
+        if partition.gpus_total > 0 {
+            let percentage = partition.gpus_alloc as f32 / partition.gpus_total as f32;
+            let label = format!("{:<width$}", partition.name, width = max_label_width);
+
+            let stats_text = format!(
+                " {}/{} ({:.0}%)",
+                partition.gpus_alloc,
+                partition.gpus_total,
+                percentage * 100.0
+            );
+
+            // Calculate how much space the bar can take up
+            let bar_max_width = inner_area
+                .width
+                .saturating_sub(max_label_width as u16)
+                .saturating_sub(stats_text.len() as u16)
+                .saturating_sub(2); // for padding
+
+            let bar_width = (bar_max_width as f32 * percentage) as u16;
+            let bar = "█".repeat(bar_width as usize);
+
+            lines.push(Line::from(vec![
+                Span::raw(format!("{} ", label)),
+                Span::styled(bar, Style::default().fg(Color::Green)),
+                Span::raw(stats_text),
+            ]));
+        }
+    }
+
+    let paragraph = Paragraph::new(lines);
+    f.render_widget(paragraph, inner_area);
+}
+
+
+
 pub fn draw(f: &mut Frame, app: &mut App) {
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -168,6 +259,30 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     match app.view_state {
+        ViewState::Overview => {
+            let overview_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(5), Constraint::Min(10)])
+                .split(inner_layout[1]); // Use the right panel
+
+            let summary_layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(overview_layout[0]);
+
+            f.render_widget(
+                get_job_summary(&app.overview)
+                    .block(Block::default().title("Jobs").borders(Borders::ALL)),
+                summary_layout[0],
+            );
+            f.render_widget(
+                get_node_summary(&app.overview)
+                    .block(Block::default().title("Nodes").borders(Borders::ALL)),
+                summary_layout[1],
+            );
+            get_gpu_utilization(f, overview_layout[1], &app.overview);
+
+        }
         ViewState::Details => match app.list_state.selected() {
             Some(i) => {
                 let job = &app.jobs[i];

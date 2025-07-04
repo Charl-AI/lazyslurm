@@ -2,7 +2,8 @@ use crossterm::event::KeyEvent;
 use ratatui::widgets::ListState;
 use tui_textarea::TextArea;
 
-use crate::jobs::{get_jobs, Job};
+use crate::jobs::{get_cluster_overview, get_jobs, ClusterOverview, Job};
+
 
 pub enum Action {
     Quit,
@@ -16,12 +17,14 @@ pub enum Action {
     ToggleHelp,
     ResetView,
     ToggleFocus,
+    ToggleOverview,
     InputKey(KeyEvent),
 }
 
 pub enum ViewState {
     Details,
     Help,
+    Overview,
 }
 
 pub enum EditorState {
@@ -36,6 +39,8 @@ pub struct App<'a> {
     pub view_state: ViewState,
     pub text_area: TextArea<'a>,
     pub editor_state: EditorState,
+    pub overview: ClusterOverview,
+
 }
 
 impl App<'_> {
@@ -46,6 +51,7 @@ impl App<'_> {
         if !jobs.is_empty() {
             list_state.select(Some(0));
         }
+        let overview = get_cluster_overview(&jobs);
 
         App {
             jobs,
@@ -54,6 +60,7 @@ impl App<'_> {
             should_quit: false,
             view_state: ViewState::Details,
             editor_state: EditorState::Normal,
+            overview
         }
     }
 
@@ -69,6 +76,7 @@ impl App<'_> {
             Some(Action::PageUp) => self.up_5(),
             Some(Action::ToggleHelp) => self.toggle_help(),
             Some(Action::ResetView) => self.reset_view(),
+            Some(Action::ToggleOverview) => self.toggle_overview(),
             Some(Action::ToggleFocus) => self.toggle_focus(),
             Some(Action::InputKey(key)) => self.text_input(key),
             None => (),
@@ -77,6 +85,8 @@ impl App<'_> {
 
     pub fn tick(&mut self) -> () {
         self.jobs = get_jobs(&self.text_area.lines().concat());
+        self.overview = get_cluster_overview(&self.jobs);
+
         // prevent list from pointing to a job out of range
         // e.g. if the cursor is on the last job and one is cancelled
         if self.jobs.is_empty() {
@@ -93,7 +103,15 @@ impl App<'_> {
         }
     }
 
+    pub fn toggle_overview(&mut self) -> () {
+        match self.view_state {
+            ViewState::Overview => self.view_state = ViewState::Details,
+            _ => self.view_state = ViewState::Overview,
+        }
+    }
+
     pub fn next(&mut self) -> () {
+        self.view_state = ViewState::Details;
         if self.jobs.is_empty() {
             self.list_state.select(None);
             return;
@@ -112,6 +130,7 @@ impl App<'_> {
         self.list_state.select(Some(i));
     }
     pub fn previous(&mut self) {
+        self.view_state = ViewState::Details;
         if self.jobs.is_empty() {
             self.list_state.select(None);
             return;
@@ -131,6 +150,7 @@ impl App<'_> {
     }
 
     pub fn down_5(&mut self) -> () {
+        self.view_state = ViewState::Details;
         if self.jobs.is_empty() {
             self.list_state.select(None);
             return;
@@ -149,6 +169,7 @@ impl App<'_> {
         self.list_state.select(Some(i));
     }
     pub fn up_5(&mut self) -> () {
+        self.view_state = ViewState::Details;
         if self.jobs.is_empty() {
             self.list_state.select(None);
             return;
@@ -167,6 +188,7 @@ impl App<'_> {
         self.list_state.select(Some(i));
     }
     pub fn home(&mut self) -> () {
+        self.view_state = ViewState::Details;
         if self.jobs.is_empty() {
             self.list_state.select(None);
             return;
@@ -174,6 +196,7 @@ impl App<'_> {
         self.list_state.select(Some(0));
     }
     pub fn end(&mut self) -> () {
+        self.view_state = ViewState::Details;
         if self.jobs.is_empty() {
             self.list_state.select(None);
             return;

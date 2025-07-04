@@ -77,6 +77,7 @@ fn handle_keys(key: KeyEvent, app: &App) -> Option<Action> {
                 Some(Action::Quit)
             }
             KeyCode::Char('?') => Some(Action::ToggleHelp),
+            KeyCode::Char('o') => Some(Action::ToggleOverview),
             KeyCode::Tab => Some(Action::ToggleFocus),
             _ => None,
         },

@@ -3,7 +3,7 @@ use ratatui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Line, Span, Text},
-    widgets::{BarChart, Block, Borders, Cell, List, ListItem, Paragraph, Row, Table},
+    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Table},
 };
 
 use crate::app::{App, EditorState, ViewState};
@@ -131,29 +131,10 @@ fn get_job_summary(overview: &ClusterOverview) -> Table {
         .block(Block::default().title("Jobs").borders(Borders::ALL))
 }
 
-fn get_node_summary(overview: &ClusterOverview) -> Table {
-    let rows = vec![
-        Row::new(vec![
-            Cell::from("Allocated"),
-            Cell::from(overview.nodes_alloc.to_string()),
-        ]),
-        Row::new(vec![
-            Cell::from("Idle"),
-            Cell::from(overview.nodes_idle.to_string()),
-        ]),
-        Row::new(vec![
-            Cell::from("Down"),
-            Cell::from(overview.nodes_down.to_string()),
-        ]),
-    ];
-    Table::new(rows, vec![Constraint::Length(12), Constraint::Length(6)])
-        .block(Block::default().title("Nodes").borders(Borders::ALL))
-}
-
 
 fn get_gpu_utilization(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
     let block = Block::default()
-        .title("GPU Utilization")
+        .title("GPU Usage")
         .borders(Borders::ALL);
     let inner_area = block.inner(area);
     f.render_widget(block, area);
@@ -259,30 +240,22 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     match app.view_state {
-        ViewState::Overview => {
-            let overview_layout = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Length(5), Constraint::Min(10)])
-                .split(inner_layout[1]); // Use the right panel
+            ViewState::Overview => {
+                let overview_layout = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(5), // Area for Job Summary
+                        Constraint::Min(10),   // Area for GPU Utilization
+                    ])
+                    .split(inner_layout[1]); // Use the right panel
 
-            let summary_layout = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(overview_layout[0]);
-
-            f.render_widget(
-                get_job_summary(&app.overview)
-                    .block(Block::default().title("Jobs").borders(Borders::ALL)),
-                summary_layout[0],
-            );
-            f.render_widget(
-                get_node_summary(&app.overview)
-                    .block(Block::default().title("Nodes").borders(Borders::ALL)),
-                summary_layout[1],
-            );
-            get_gpu_utilization(f, overview_layout[1], &app.overview);
-
-        }
+                f.render_widget(
+                    get_job_summary(&app.overview)
+                        .block(Block::default().title("Jobs").borders(Borders::ALL)),
+                    overview_layout[0],
+                );
+                get_gpu_utilization(f, overview_layout[1], &app.overview);
+            }
         ViewState::Details => match app.list_state.selected() {
             Some(i) => {
                 let job = &app.jobs[i];

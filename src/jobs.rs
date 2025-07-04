@@ -177,10 +177,6 @@ fn replace_char(symbol: char, job: &Job) -> Option<String> {
 #[derive(Clone, Debug, Default)]
 pub struct PartitionInfo {
     pub name: String,
-    pub gres: String,
-    pub nodes_alloc: u32,
-    pub nodes_idle: u32,
-    pub nodes_down: u32,
     pub gpus_alloc: u32,
     pub gpus_total: u32,
 }
@@ -189,9 +185,6 @@ pub struct ClusterOverview {
     pub jobs_running: u32,
     pub jobs_pending: u32,
     pub jobs_completing: u32,
-    pub nodes_alloc: u32,
-    pub nodes_idle: u32,
-    pub nodes_down: u32,
     pub partitions: Vec<PartitionInfo>,
 }
 

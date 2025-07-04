@@ -52,11 +52,11 @@ fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
                     Style::default(),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.JobID, max = 6),
+                    format!(" {:<max$.max$} ", j.JobID, max = 10),
                     Style::default().fg(Color::Yellow),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.UserName, max = 6),
+                    format!(" {:<max$.max$} ", j.UserName, max = 10),
                     Style::default().fg(Color::Blue),
                 ),
                 Span::styled(
@@ -64,11 +64,11 @@ fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
                     Style::default().fg(Color::Cyan),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.NodeList, max = 9),
+                    format!(" {:<max$.max$} ", j.NodeList, max = 10),
                     Style::default().fg(Color::Magenta),
                 ),
                 Span::styled(
-                    format!(" {:<max$.max$} ", j.Partition, max = 11),
+                    format!(" {:<max$.max$} ", j.Partition, max = 10),
                     Style::default().fg(Color::Green),
                 ),
                 Span::styled(

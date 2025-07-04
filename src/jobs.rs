@@ -234,17 +234,30 @@ pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
         }
     }
 
-    let gpu_alloc_re = Regex::new(r"gres/gpu(:[^=]*)?=(\d+)").unwrap();
+    let generic_gpu_re = Regex::new(r"gres/gpu=(\d+)").unwrap();
+    let specific_gpu_re = Regex::new(r"gres/gpu:[^=]*=(\d+)").unwrap();
+
     for job in jobs.iter().filter(|j| j.State == "RUNNING") {
         if let Some(partition_info) = partitions_map.get_mut(&job.Partition) {
-            if let Some(caps) = gpu_alloc_re.captures(&job.TRES) {
-                if let Some(gpu_count_match) = caps.get(2) { // The count is the 2nd capture group
-                    let gpus_allocated: u32 = gpu_count_match.as_str().parse().unwrap_or(0);
-                    partition_info.gpus_alloc += gpus_allocated;
+            let mut gpus_for_job = 0;
+
+            // First, check for the generic 'gres/gpu=' field.
+            if let Some(caps) = generic_gpu_re.captures(&job.TRES) {
+                if let Some(count_match) = caps.get(1) {
+                    gpus_for_job = count_match.as_str().parse().unwrap_or(0);
+                }
+            } else {
+                // If no generic field, sum up all specific 'gres/gpu:type=' fields.
+                for caps in specific_gpu_re.captures_iter(&job.TRES) {
+                    if let Some(count_match) = caps.get(1) {
+                        gpus_for_job += count_match.as_str().parse::<u32>().unwrap_or(0);
+                    }
                 }
             }
+            partition_info.gpus_alloc += gpus_for_job;
         }
     }
+
 
     overview.partitions = partitions_map.into_values().collect();
     overview.partitions.sort_by(|a, b| a.name.cmp(&b.name));

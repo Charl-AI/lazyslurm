@@ -203,52 +203,48 @@ pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
     let mut partitions_map: HashMap<String, PartitionInfo> = HashMap::new();
 
     let sinfo_output = Command::new("sinfo")
+        .arg("-N") // Get Node-specific information
         .arg("-o")
-        .arg("%P %D %G") // Partition, NodeCount, Generic Resources
+        .arg("%P %G") // Format: Partition, Generic Resources of the node
         .output()
         .expect("failed to execute sinfo");
 
     let sinfo_str = String::from_utf8_lossy(&sinfo_output.stdout);
-    let gpu_re = Regex::new(r"gpu:(\w+:)?(\d+)").unwrap();
+    let gpu_re = Regex::new(r"gpu(:\w+)?:(\d+)").unwrap();
 
     for line in sinfo_str.lines().skip(1) { // Skip header
         let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 3 {
-            continue;
-        }
+        if parts.len() < 2 { continue; } // Need at least Partition and GRES
 
         let partition_name = parts[0].to_string();
-        let node_count: u32 = parts[1].parse().unwrap_or(0);
-        let gres_str = parts[2];
+        let gres_str = parts[1];
 
-        if let Some(caps) = gpu_re.captures(gres_str) {
-            if let Some(gpu_count_match) = caps.get(2) {
-                let gpus_per_node: u32 = gpu_count_match.as_str().parse().unwrap_or(0);
-                let total_gpus = gpus_per_node * node_count;
+        let partition_info = partitions_map
+            .entry(partition_name.clone())
+            .or_insert_with(|| PartitionInfo {
+                name: partition_name,
+                ..Default::default()
+            });
 
-                let partition_info = partitions_map
-                    .entry(partition_name.clone())
-                    .or_insert_with(|| PartitionInfo {
-                        name: partition_name,
-                        ..Default::default()
-                    });
-                partition_info.gpus_total += total_gpus;
+        for cap in gpu_re.captures_iter(gres_str) {
+            if let Some(gpu_count_match) = cap.get(2) {
+                let gpus_on_node: u32 = gpu_count_match.as_str().parse().unwrap_or(0);
+                partition_info.gpus_total += gpus_on_node;
             }
         }
     }
 
-    let gpu_alloc_re = Regex::new(r"gres/gpu=(\d+)").unwrap();
+    let gpu_alloc_re = Regex::new(r"gres/gpu(:[^=]*)?=(\d+)").unwrap();
     for job in jobs.iter().filter(|j| j.State == "RUNNING") {
         if let Some(partition_info) = partitions_map.get_mut(&job.Partition) {
             if let Some(caps) = gpu_alloc_re.captures(&job.TRES) {
-                if let Some(gpu_count_match) = caps.get(1) {
+                if let Some(gpu_count_match) = caps.get(2) { // The count is the 2nd capture group
                     let gpus_allocated: u32 = gpu_count_match.as_str().parse().unwrap_or(0);
                     partition_info.gpus_alloc += gpus_allocated;
                 }
             }
         }
     }
-
 
     overview.partitions = partitions_map.into_values().collect();
     overview.partitions.sort_by(|a, b| a.name.cmp(&b.name));

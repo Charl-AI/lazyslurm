@@ -251,7 +251,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
                 f.render_widget(
                     get_job_summary(&app.overview)
-                        .block(Block::default().title("Jobs").borders(Borders::ALL)),
+                        .block(Block::default().title("Overview").borders(Borders::ALL)),
                     overview_layout[0],
                 );
                 get_gpu_utilization(f, overview_layout[1], &app.overview);

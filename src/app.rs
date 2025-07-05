@@ -58,7 +58,7 @@ impl App<'_> {
             list_state,
             text_area,
             should_quit: false,
-            view_state: ViewState::Details,
+            view_state: ViewState::Overview,
             editor_state: EditorState::Normal,
             overview
         }

@@ -180,18 +180,32 @@ pub struct PartitionInfo {
     pub gpus_alloc: u32,
     pub gpus_total: u32,
 }
+
+#[derive(Clone, Debug, Default)]
+pub struct UserStats {
+    pub name: String,
+    pub running_jobs: u32,
+    pub pending_jobs: u32,
+    pub gpus_used: u32,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ClusterOverview {
     pub jobs_running: u32,
     pub jobs_pending: u32,
     pub jobs_completing: u32,
     pub partitions: Vec<PartitionInfo>,
+    pub user_stats: Vec<UserStats>,
 }
 
 pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
     let mut overview = ClusterOverview::default();
+    let mut partitions_map: HashMap<String, PartitionInfo> = HashMap::new();
+    let mut user_stats_map: HashMap<String, UserStats> = HashMap::new();
 
-    // Job counts
+    let generic_gpu_re = Regex::new(r"gres/gpu=(\d+)").unwrap();
+    let specific_gpu_re = Regex::new(r"gres/gpu:[^=]*=(\d+)").unwrap();
+
     for job in jobs {
         match job.State.as_str() {
             "RUNNING" => overview.jobs_running += 1,
@@ -199,8 +213,46 @@ pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
             "COMPLETING" => overview.jobs_completing += 1,
             _ => (),
         }
+
+        let user_stats = user_stats_map
+            .entry(job.UserName.clone())
+            .or_insert_with(|| UserStats {
+                name: job.UserName.clone(),
+                ..Default::default()
+            });
+
+        match job.State.as_str() {
+            "RUNNING" => {
+                user_stats.running_jobs += 1;
+                let mut gpus_for_job = 0;
+                if let Some(caps) = generic_gpu_re.captures(&job.TRES) {
+                    if let Some(count_match) = caps.get(1) {
+                        gpus_for_job = count_match.as_str().parse().unwrap_or(0);
+                    }
+                } else {
+                    for caps in specific_gpu_re.captures_iter(&job.TRES) {
+                        if let Some(count_match) = caps.get(1) {
+                            gpus_for_job += count_match.as_str().parse::<u32>().unwrap_or(0);
+                        }
+                    }
+                }
+                user_stats.gpus_used += gpus_for_job;
+            }
+            "PENDING" => {
+                user_stats.pending_jobs += 1;
+            }
+            _ => (),
+        }
     }
-    let mut partitions_map: HashMap<String, PartitionInfo> = HashMap::new();
+
+    let mut user_stats_vec: Vec<UserStats> = user_stats_map.into_values().collect();
+    user_stats_vec.sort_by(|a, b| {
+        b.gpus_used.cmp(&a.gpus_used)
+            .then_with(|| a.name.cmp(&b.name))
+    });
+
+    overview.user_stats = user_stats_vec;
+
 
     let sinfo_output = Command::new("sinfo")
         .arg("-N") // Get Node-specific information

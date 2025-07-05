@@ -181,6 +181,35 @@ fn get_gpu_utilization(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
     f.render_widget(paragraph, inner_area);
 }
 
+fn get_user_stats(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
+    let header_cells = ["User", "Running", "Pending", "GPUs"]
+        .iter()
+        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Yellow)));
+    let header = Row::new(header_cells).height(1).bottom_margin(0);
+
+    let rows = overview.user_stats.iter().map(|s| {
+        Row::new(vec![
+            Cell::from(s.name.as_str()),
+            Cell::from(s.running_jobs.to_string()),
+            Cell::from(s.pending_jobs.to_string()),
+            Cell::from(s.gpus_used.to_string()),
+        ])
+    });
+
+    let table = Table::new(
+        rows,
+        vec![
+            Constraint::Fill(1),
+            Constraint::Max(8),
+            Constraint::Max(8),
+            Constraint::Max(8),
+        ],
+    )
+    .header(header)
+    .block(Block::default().borders(Borders::ALL).title("Stats"));
+
+    f.render_widget(table, area);
+}
 
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -240,22 +269,25 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     match app.view_state {
-            ViewState::Overview => {
-                let overview_layout = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([
-                        Constraint::Length(5), // Area for Job Summary
-                        Constraint::Min(10),   // Area for GPU Utilization
-                    ])
-                    .split(inner_layout[1]); // Use the right panel
+        ViewState::Overview => {
+            let overview_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(5),    // Job Summary
+                    Constraint::Length(8),    // GPU Utilization
+                    Constraint::Min(0),      // User Stats
+                ])
+                .split(inner_layout[1]);
 
-                f.render_widget(
-                    get_job_summary(&app.overview)
-                        .block(Block::default().title("Overview").borders(Borders::ALL)),
-                    overview_layout[0],
-                );
-                get_gpu_utilization(f, overview_layout[1], &app.overview);
-            }
+            f.render_widget(
+                get_job_summary(&app.overview)
+                    .block(Block::default().title("Jobs").borders(Borders::ALL)),
+                overview_layout[0],
+            );
+
+            get_gpu_utilization(f, overview_layout[1], &app.overview);
+            get_user_stats(f, overview_layout[2], &app.overview);
+        }
         ViewState::Details => match app.list_state.selected() {
             Some(i) => {
                 let job = &app.jobs[i];

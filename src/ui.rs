@@ -30,7 +30,12 @@ Ctrl-u | PageUp      : up 5 rows
 ## Filtering jobs
 
 The live filter box accepts arbitrary regex which
-will be matched against all job details. For example:
+will be matched against all job details. Filtering
+also affects the overview panel, so you can do things
+like check how many GPUs on a partition are being
+used or how many jobs are running with 8 GPUs.
+
+For example:
 
 cj1917               : jobs from user cj1917
 loki                 : jobs on node loki
@@ -42,6 +47,8 @@ loki.*gpus=2         : jobs on loki AND with 2 GPUs
 
 NB: using .* for regex AND is order-sensitive
 i.e. the first case must match before the second.
+The matching order will be the same as the ordering
+shown in the Details panel.
 ";
 
 fn get_short_jobs_list(jobs: &Vec<Job>) -> Vec<ListItem> {
@@ -131,40 +138,38 @@ fn get_job_summary(overview: &ClusterOverview) -> Table {
         .block(Block::default().title("Jobs").borders(Borders::ALL))
 }
 
-
 fn get_gpu_utilization(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
     let block = Block::default()
-        .title("GPU Usage")
+        .title("GPU overview")
         .borders(Borders::ALL);
     let inner_area = block.inner(area);
     f.render_widget(block, area);
 
     let mut lines = Vec::new();
     let max_label_width = overview
-        .partitions
+        .gpu_types // Changed from .partitions
         .iter()
-        .map(|p| p.name.len())
+        .map(|g| g.name.len())
         .max()
         .unwrap_or(10);
 
-    for partition in &overview.partitions {
-        if partition.gpus_total > 0 {
-            let percentage = partition.gpus_alloc as f32 / partition.gpus_total as f32;
-            let label = format!("{:<width$}", partition.name, width = max_label_width);
+    for gpu_type in &overview.gpu_types { // Changed from partitions
+        if gpu_type.total > 0 {
+            let percentage = gpu_type.alloc as f32 / gpu_type.total as f32;
+            let label = format!("{:<width$}", gpu_type.name, width = max_label_width);
 
             let stats_text = format!(
                 " {}/{} ({:.0}%)",
-                partition.gpus_alloc,
-                partition.gpus_total,
+                gpu_type.alloc,
+                gpu_type.total,
                 percentage * 100.0
             );
 
-            // Calculate how much space the bar can take up
             let bar_max_width = inner_area
                 .width
                 .saturating_sub(max_label_width as u16)
                 .saturating_sub(stats_text.len() as u16)
-                .saturating_sub(2); // for padding
+                .saturating_sub(2);
 
             let bar_width = (bar_max_width as f32 * percentage) as u16;
             let bar = "█".repeat(bar_width as usize);
@@ -206,7 +211,7 @@ fn get_user_stats(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
         ],
     )
     .header(header)
-    .block(Block::default().borders(Borders::ALL).title("Stats"));
+    .block(Block::default().borders(Borders::ALL).title("Users overview"));
 
     f.render_widget(table, area);
 }
@@ -281,7 +286,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
             f.render_widget(
                 get_job_summary(&app.overview)
-                    .block(Block::default().title("Jobs").borders(Borders::ALL)),
+                    .block(Block::default().title("Jobs overview").borders(Borders::ALL)),
                 overview_layout[0],
             );
 

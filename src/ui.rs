@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{App, EditorState, ViewState};
-use crate::jobs::{Job,ClusterOverview};
+use crate::jobs::{ClusterOverview, Job};
 
 const HELP_SHORT: &str = "q: quit | ?: toggle help | o: toggle overview | <tab>: toggle focus";
 const HELP: &str = "lazyslurm is for monitoring SLURM jobs.
@@ -119,87 +119,39 @@ fn get_job_details(job: &Job) -> Paragraph {
     Paragraph::new(text)
 }
 
-fn get_job_summary(overview: &ClusterOverview) -> Table {
-    let rows = vec![
-        Row::new(vec![
-            Cell::from("Running"),
-            Cell::from(overview.jobs_running.to_string()),
-        ]),
-        Row::new(vec![
-            Cell::from("Pending"),
-            Cell::from(overview.jobs_pending.to_string()),
-        ]),
-        Row::new(vec![
-            Cell::from("Completing"),
-            Cell::from(overview.jobs_completing.to_string()),
-        ]),
-    ];
-    Table::new(rows, vec![Constraint::Length(12), Constraint::Length(6)])
-        .block(Block::default().title("Jobs").borders(Borders::ALL))
-}
-
-fn get_gpu_utilization(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
-    let block = Block::default()
-        .title("GPU overview")
-        .borders(Borders::ALL);
-    let inner_area = block.inner(area);
-    f.render_widget(block, area);
-
-    let mut lines = Vec::new();
-    let max_label_width = overview
-        .gpu_types // Changed from .partitions
-        .iter()
-        .map(|g| g.name.len())
-        .max()
-        .unwrap_or(10);
-
-    for gpu_type in &overview.gpu_types { // Changed from partitions
-        if gpu_type.total > 0 {
-            let percentage = gpu_type.alloc as f32 / gpu_type.total as f32;
-            let label = format!("{:<width$}", gpu_type.name, width = max_label_width);
-
-            let stats_text = format!(
-                " {}/{} ({:.0}%)",
-                gpu_type.alloc,
-                gpu_type.total,
-                percentage * 100.0
-            );
-
-            let bar_max_width = inner_area
-                .width
-                .saturating_sub(max_label_width as u16)
-                .saturating_sub(stats_text.len() as u16)
-                .saturating_sub(2);
-
-            let bar_width = (bar_max_width as f32 * percentage) as u16;
-            let bar = "█".repeat(bar_width as usize);
-
-            lines.push(Line::from(vec![
-                Span::raw(format!("{} ", label)),
-                Span::styled(bar, Style::default().fg(Color::Green)),
-                Span::raw(stats_text),
-            ]));
-        }
-    }
-
-    let paragraph = Paragraph::new(lines);
-    f.render_widget(paragraph, inner_area);
-}
-
 fn get_user_stats(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
     let header_cells = ["User", "Running", "Pending", "GPUs"]
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::Yellow)));
-    let header = Row::new(header_cells).height(1).bottom_margin(0);
+    let header = Row::new(header_cells).height(1).bottom_margin(1);
 
-    let rows = overview.user_stats.iter().map(|s| {
-        Row::new(vec![
-            Cell::from(s.name.as_str()),
-            Cell::from(s.running_jobs.to_string()),
-            Cell::from(s.pending_jobs.to_string()),
-            Cell::from(s.gpus_used.to_string()),
-        ])
-    });
+    let total_gpus: u32 = overview.user_stats.iter().map(|s| s.gpus_used).sum();
+
+    let total_row = Row::new(vec![
+        Cell::from("TOTAL").style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(overview.jobs_running.to_string())
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(overview.jobs_pending.to_string())
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(total_gpus.to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
+    ])
+    .height(1)
+    .bottom_margin(1);
+
+    let mut rows: Vec<Row> = overview
+        .user_stats
+        .iter()
+        .map(|s| {
+            Row::new(vec![
+                Cell::from(s.name.as_str()),
+                Cell::from(s.running_jobs.to_string()),
+                Cell::from(s.pending_jobs.to_string()),
+                Cell::from(s.gpus_used.to_string()),
+            ])
+        })
+        .collect();
+
+    rows.insert(0, total_row);
 
     let table = Table::new(
         rows,
@@ -211,11 +163,14 @@ fn get_user_stats(f: &mut Frame, area: Rect, overview: &ClusterOverview) {
         ],
     )
     .header(header)
-    .block(Block::default().borders(Borders::ALL).title("Users overview"));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Overview"),
+    );
 
     f.render_widget(table, area);
 }
-
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let outer_layout = Layout::default()
@@ -275,23 +230,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     match app.view_state {
         ViewState::Overview => {
-            let overview_layout = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Length(5),    // Job Summary
-                    Constraint::Length(8),    // GPU Utilization
-                    Constraint::Min(0),      // User Stats
-                ])
-                .split(inner_layout[1]);
-
-            f.render_widget(
-                get_job_summary(&app.overview)
-                    .block(Block::default().title("Jobs overview").borders(Borders::ALL)),
-                overview_layout[0],
-            );
-
-            get_gpu_utilization(f, overview_layout[1], &app.overview);
-            get_user_stats(f, overview_layout[2], &app.overview);
+            get_user_stats(f, inner_layout[1], &app.overview);
         }
         ViewState::Details => match app.list_state.selected() {
             Some(i) => {
@@ -342,3 +281,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     f.render_widget(app.text_area.widget(), outer_layout[2]);
     f.render_widget(Paragraph::new(HELP_SHORT), outer_layout[3]);
 }
+
+
+

@@ -1,4 +1,4 @@
-use regex::{RegexBuilder,Regex};
+use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 use std::{io::BufRead, process::Command};
 
@@ -175,13 +175,6 @@ fn replace_char(symbol: char, job: &Job) -> Option<String> {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct GpuTypeInfo {
-    pub name: String,
-    pub total: u32,
-    pub alloc: u32,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct UserStats {
     pub name: String,
     pub running_jobs: u32,
@@ -194,37 +187,12 @@ pub struct ClusterOverview {
     pub jobs_running: u32,
     pub jobs_pending: u32,
     pub jobs_completing: u32,
-    pub gpu_types: Vec<GpuTypeInfo>,
     pub user_stats: Vec<UserStats>,
 }
 
 pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
     let mut overview = ClusterOverview::default();
     let mut user_stats_map: HashMap<String, UserStats> = HashMap::new();
-    let mut gpu_type_map: HashMap<String, GpuTypeInfo> = HashMap::new();
-
-    let sinfo_output = Command::new("sinfo")
-        .arg("-N")
-        .arg("-o")
-        .arg("%G")
-        .output()
-        .expect("failed to execute sinfo");
-
-    let sinfo_str = String::from_utf8_lossy(&sinfo_output.stdout);
-    let gpu_re = Regex::new(r"gpu(?::(\w+))?:(\d+)").unwrap();
-
-    for line in sinfo_str.lines().skip(1) {
-        for caps in gpu_re.captures_iter(line) {
-            let gpu_type_name = caps.get(1).map_or("gpu", |m| m.as_str()).to_string();
-            let count: u32 = caps.get(2).map_or(0, |m| m.as_str().parse().unwrap_or(0));
-
-            let gpu_info = gpu_type_map
-                .entry(gpu_type_name.clone())
-                .or_insert_with(|| GpuTypeInfo { name: gpu_type_name, ..Default::default() });
-
-            gpu_info.total += count;
-        }
-    }
 
     let generic_gpu_re = Regex::new(r"gres/gpu=(\d+)").unwrap();
     let specific_gpu_re = Regex::new(r"gres/gpu:(\w+)=(\d+)").unwrap();
@@ -236,22 +204,19 @@ pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
             _ => (),
         }
 
-        let user_stats = user_stats_map.entry(job.UserName.clone()).or_insert_with(|| UserStats {
-            name: job.UserName.clone(),
-            ..Default::default()
-        });
+        let user_stats = user_stats_map
+            .entry(job.UserName.clone())
+            .or_insert_with(|| UserStats {
+                name: job.UserName.clone(),
+                ..Default::default()
+            });
 
         if job.State == "RUNNING" {
             user_stats.running_jobs += 1;
             let mut total_gpus_for_job = 0;
 
             for caps in specific_gpu_re.captures_iter(&job.TRES) {
-                let gpu_type_name = caps.get(1).map_or("gpu", |m| m.as_str()).to_string();
                 let count: u32 = caps.get(2).map_or(0, |m| m.as_str().parse().unwrap_or(0));
-
-                if let Some(gpu_info) = gpu_type_map.get_mut(&gpu_type_name) {
-                    gpu_info.alloc += count;
-                }
                 total_gpus_for_job += count;
             }
 
@@ -259,27 +224,22 @@ pub fn get_cluster_overview(jobs: &Vec<Job>) -> ClusterOverview {
                 if let Some(caps) = generic_gpu_re.captures(&job.TRES) {
                     if let Some(count_match) = caps.get(1) {
                         let count: u32 = count_match.as_str().parse().unwrap_or(0);
-                        if let Some(gpu_info) = gpu_type_map.get_mut("gpu") {
-                            gpu_info.alloc += count;
-                        }
                         total_gpus_for_job = count;
                     }
                 }
             }
             user_stats.gpus_used += total_gpus_for_job;
-
         } else if job.State == "PENDING" {
             user_stats.pending_jobs += 1;
         }
     }
 
     let mut user_stats_vec: Vec<UserStats> = user_stats_map.into_values().collect();
-    user_stats_vec.sort_by(|a, b| b.gpus_used.cmp(&a.gpus_used).then_with(|| a.name.cmp(&b.name)));
+    user_stats_vec.sort_by(|a, b| {
+        b.gpus_used
+            .cmp(&a.gpus_used)
+            .then_with(|| a.name.cmp(&b.name))
+    });
     overview.user_stats = user_stats_vec;
-
-    let mut gpu_types_vec: Vec<GpuTypeInfo> = gpu_type_map.into_values().collect();
-    gpu_types_vec.sort_by(|a, b| b.total.cmp(&a.total).then_with(|| a.name.cmp(&b.name)));
-    overview.gpu_types = gpu_types_vec;
-
     overview
 }
